@@ -1,0 +1,117 @@
+name: CI/CD
+
+# develop -> homolog | main -> prod. PRs so rodam build, testes e validacao do Terraform.
+on:
+  pull_request:
+    branches: [ develop, main ]
+  push:
+    branches: [ develop, main ]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-cd-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  DOTNET_VERSION: '8.0.x'
+  TF_VERSION: '1.13.0'
+
+jobs:
+  build-test:
+    name: Build & Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Test (com cobertura)
+        run: dotnet test --configuration Release --collect:"XPlat Code Coverage" --results-directory ./coverage
+
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: ./coverage
+
+  terraform-validate:
+    name: Terraform validate
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: infra
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - run: terraform fmt -check -recursive
+      - run: terraform init -backend=false -input=false
+      - run: terraform validate
+
+  deploy:
+    name: Deploy (${{ github.ref_name == 'main' && 'prod' || 'homolog' }})
+    needs: [ build-test, terraform-validate ]
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    # Secrets e variaveis ficam no GitHub Environment de cada ambiente
+    environment: ${{ github.ref_name == 'main' && 'prod' || 'homolog' }}
+    env:
+      AMBIENTE: ${{ github.ref_name == 'main' && 'prod' || 'homolog' }}
+      AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Empacotar a Lambda
+        run: |
+          dotnet tool install -g Amazon.Lambda.Tools
+          dotnet lambda package \
+            --project-location src/Oficina.Auth.Lambda \
+            --configuration Release \
+            --framework net8.0 \
+            --output-package artifact/function.zip
+
+      - name: Credenciais AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Terraform apply
+        working-directory: infra
+        run: |
+          terraform init -input=false \
+            -backend-config="bucket=${{ vars.TF_STATE_BUCKET }}" \
+            -backend-config="key=oficina/lambda-auth/${AMBIENTE}.tfstate" \
+            -backend-config="region=${AWS_REGION}"
+          terraform apply -auto-approve -input=false \
+            -var="environment=${AMBIENTE}" \
+            -var="aws_region=${AWS_REGION}" \
+            -var="lambda_role_arn=${{ vars.LAMBDA_ROLE_ARN }}" \
+            -var="package_path=../artifact/function.zip"
+
+      # Smoke test: um CPF invalido precisa voltar 400 (prova que a funcao subiu e responde)
+      - name: Smoke test
+        run: |
+          aws lambda invoke \
+            --function-name "oficina-${AMBIENTE}-auth-cpf" \
+            --cli-binary-format raw-in-base64-out \
+            --payload '{"body":"{\"cpf\":\"123\"}","requestContext":{"requestId":"smoke-test"}}' \
+            resposta.json
+          cat resposta.json
+          test "$(jq -r '.statusCode' resposta.json)" = "400"
