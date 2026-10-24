@@ -1,0 +1,5 @@
+aws_region  = "us-east-1"
+environment = "homolog"
+
+# AWS Academy (Learner Lab) nao permite criar roles: informe a LabRole
+# lambda_role_arn = "arn:aws:iam::123456789012:role/LabRole"
