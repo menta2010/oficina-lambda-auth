@@ -1,0 +1,68 @@
+## --- .NET ---
+bin/
+obj/
+[Bb]in/
+[Oo]bj/
+*.user
+*.suo
+*.userosscache
+*.dbmdl
+.vs/
+
+## --- Testes / cobertura ---
+[Tt]est[Rr]esults/
+coverage/
+coverage*.xml
+*.cobertura.xml
+*.coverage
+*.trx
+TestResults*/
+
+## --- SonarQube ---
+.sonarqube/
+.sonar/
+.scannerwork/
+
+## --- Build / publish ---
+[Dd]ebug/
+[Rr]elease/
+publish/
+*.dll.config
+
+## --- Segredos / ambiente ---
+.env
+appsettings.*.Local.json
+
+## --- Scripts internos (nao versionar) ---
+scripts/security-scan.sh
+
+## --- Terraform (estado contem valores sensiveis: NAO versionar) ---
+.terraform/
+.terraform.lock.hcl
+*.tfstate
+*.tfstate.*
+*.tfplan
+crash.log
+terraform.tfvars
+*.auto.tfvars
+override.tf
+override.tf.json
+
+## --- Kubernetes ---
+kubeconfig
+*.kubeconfig
+
+## --- Diversos ---
+.DS_Store
+*.lnk
+*.log
+
+## --- Lambda / Terraform ---
+artifact/
+*.zip
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+.terraform.lock.hcl.bak
