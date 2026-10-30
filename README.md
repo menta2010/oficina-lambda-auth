@@ -13,7 +13,18 @@ Repositório 1 de 4 do Tech Challenge da Fase 3 (SOAT):
 | **oficina-lambda-auth** (este) | Lambdas de autenticação e job de inativação + rotas no API Gateway |
 | oficina-infra-k8s | VPC, cluster EKS, API Gateway, segredo do JWT, SNS |
 | oficina-infra-db | RDS PostgreSQL e segredos do banco |
-| oficina-app | API de ordens de serviço rodando no Kubernetes |
+| [tech-challenge-oficina-mecanica](https://github.com/menta2010/tech-challenge-oficina-mecanica) | API de ordens de serviço rodando no Kubernetes |
+
+## Links
+
+| Item | Link |
+| --- | --- |
+| Autenticação por CPF (prod) | `POST https://7d2ypan7l9.execute-api.us-east-1.amazonaws.com/auth/cpf` |
+| Login de funcionário (prod) | `POST https://7d2ypan7l9.execute-api.us-east-1.amazonaws.com/auth/login` |
+| Swagger | https://7d2ypan7l9.execute-api.us-east-1.amazonaws.com/swagger |
+| Collection Postman | [oficina-fase3.postman_collection.json](https://github.com/menta2010/tech-challenge-oficina-mecanica/blob/master/docs/postman/oficina-fase3.postman_collection.json) |
+
+O ambiente roda no AWS Academy: a URL só responde enquanto o laboratório está ligado.
 
 ## Autenticação por CPF — `POST /auth/cpf`
 
@@ -147,4 +158,4 @@ curl -s -X POST "$API_URL/auth/cpf" -H "Content-Type: application/json" -H "x-co
 curl -s -X POST "$API_URL/auth/login" -H "Content-Type: application/json" -d '{"usuario":"atendente.centro","senha":"<senha>"}'
 ```
 
-As URLs saem nos outputs `auth_cpf_url` e `auth_login_url` do Terraform. A collection Postman com o fluxo completo fica no repositório `oficina-app` (`docs/postman`).
+As URLs saem nos outputs `auth_cpf_url` e `auth_login_url` do Terraform. A collection Postman com o fluxo completo fica no repositório `tech-challenge-oficina-mecanica` (`docs/postman`).
